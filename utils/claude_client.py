@@ -5,7 +5,7 @@ import streamlit as st
 
 from utils.chunker import split_into_chunks
 
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-2.0-flash"
 
 _SYSTEM = (
     "You are an expert legal analyst who translates complex legal language into "
