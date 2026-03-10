@@ -2,6 +2,7 @@ import re
 
 import google.generativeai as genai
 import streamlit as st
+from google.api_core.exceptions import ResourceExhausted, GoogleAPIError
 
 from utils.chunker import split_into_chunks
 
@@ -121,8 +122,15 @@ def _get_model():
 
 
 def _call(model, user_prompt: str) -> str:
-    response = model.generate_content(user_prompt)
-    return response.text
+    try:
+        response = model.generate_content(user_prompt)
+        return response.text
+    except ResourceExhausted:
+        raise ValueError(
+            "Gemini free tier rate limit reached. Please wait a minute and try again."
+        )
+    except GoogleAPIError as e:
+        raise ValueError(f"Gemini API error: {e.message}") from e
 
 
 def _parse(response: str) -> dict:
