@@ -309,7 +309,6 @@ with lang_col:
 # ── Page header ───────────────────────────────────────────────────────────────
 st.title(t("page_title", lang))
 st.caption(t("page_caption", lang))
-st.info(t("demo_banner", lang))
 
 # ── Input tabs ────────────────────────────────────────────────────────────────
 tab_paste, tab_url, tab_pdf = st.tabs([
