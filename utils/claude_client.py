@@ -1,7 +1,8 @@
 import re
 
-import google.generativeai as genai
 import streamlit as st
+from google import genai
+from google.genai import types
 from google.api_core.exceptions import ResourceExhausted, GoogleAPIError
 
 from utils.chunker import split_into_chunks
@@ -108,22 +109,24 @@ SECTION ANALYSES:
 }
 
 
-def _get_model():
+def _get_client():
     api_key = st.secrets.get("GOOGLE_API_KEY") or None
     if not api_key:
         raise ValueError(
             "GOOGLE_API_KEY is not set. Add it to your Streamlit secrets."
         )
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel(
-        model_name=MODEL,
-        system_instruction=_SYSTEM,
-    )
+    return genai.Client(api_key=api_key)
 
 
-def _call(model, user_prompt: str) -> str:
+def _call(client, user_prompt: str) -> str:
     try:
-        response = model.generate_content(user_prompt)
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=_SYSTEM,
+            ),
+        )
         return response.text
     except ResourceExhausted:
         raise ValueError(
@@ -149,16 +152,16 @@ def _parse(response: str) -> dict:
 
 def analyze_document(text: str, lang: str = "en") -> dict:
     """Analyze a legal document with Gemini. Returns {"summary": str, "risks": list[str]}."""
-    model = _get_model()
+    client = _get_client()
     chunks = split_into_chunks(text)
     tmpl = _USER_TMPL.get(lang, _USER_TMPL["en"])
 
     if len(chunks) == 1:
-        response = _call(model, tmpl.format(text=chunks[0]))
+        response = _call(client, tmpl.format(text=chunks[0]))
     else:
-        chunk_analyses = [_call(model, tmpl.format(text=chunk)) for chunk in chunks]
+        chunk_analyses = [_call(client, tmpl.format(text=chunk)) for chunk in chunks]
         reduce_tmpl = _REDUCE_TMPL.get(lang, _REDUCE_TMPL["en"])
         combined = "\n\n---\n\n".join(chunk_analyses)
-        response = _call(model, reduce_tmpl.format(text=combined))
+        response = _call(client, reduce_tmpl.format(text=combined))
 
     return _parse(response)
